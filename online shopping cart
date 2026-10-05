@@ -1,0 +1,410 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_PRODUCTS 50
+
+struct Product {
+    int id;
+    char name[50];
+    float price;
+    int stock;
+};
+
+struct CartNode {
+    int id;
+    char name[50];
+    float price;
+    int quantity;
+    struct CartNode *next;
+};
+
+struct Product products[MAX_PRODUCTS] = {
+    {101, "Laptop", 55000.00, 10},
+    {102, "Smartphone", 25000.00, 15},
+    {103, "Headphones", 1500.00, 20},
+    {104, "Keyboard", 1200.00, 12},
+    {105, "Mouse", 700.00, 25},
+    {106, "Smart Watch", 3000.00, 10},
+    {107, "Power Bank", 1800.00, 18},
+    {108, "USB Cable", 400.00, 30}
+};
+
+int productCount = 8;
+struct CartNode *cart = NULL;
+
+/* Display all products */
+void displayProducts() {
+    int i;
+
+    printf("\n========== PRODUCT LIST ==========\n");
+    printf("%-8s %-20s %-12s %-8s\n",
+           "ID", "Product", "Price", "Stock");
+
+    for (i = 0; i < productCount; i++) {
+        printf("%-8d %-20s Rs.%-9.2f %-8d\n",
+               products[i].id,
+               products[i].name,
+               products[i].price,
+               products[i].stock);
+    }
+}
+
+/* Search product by ID */
+int searchProduct(int id) {
+    int i;
+
+    for (i = 0; i < productCount; i++) {
+        if (products[i].id == id)
+            return i;
+    }
+
+    return -1;
+}
+
+/* Add product to cart */
+void addToCart() {
+    int id, quantity, index;
+    struct CartNode *temp;
+    struct CartNode *newNode;
+
+    printf("\nEnter Product ID: ");
+    scanf("%d", &id);
+
+    index = searchProduct(id);
+
+    if (index == -1) {
+        printf("Product not found!\n");
+        return;
+    }
+
+    printf("Enter Quantity: ");
+    scanf("%d", &quantity);
+
+    if (quantity <= 0) {
+        printf("Invalid quantity!\n");
+        return;
+    }
+
+    if (quantity > products[index].stock) {
+        printf("Insufficient stock!\n");
+        return;
+    }
+
+    /* Check whether product already exists in cart */
+    temp = cart;
+
+    while (temp != NULL) {
+        if (temp->id == id) {
+            temp->quantity += quantity;
+            products[index].stock -= quantity;
+
+            printf("Product quantity updated in cart.\n");
+            return;
+        }
+
+        temp = temp->next;
+    }
+
+    /* Create new cart node */
+    newNode = (struct CartNode *)malloc(sizeof(struct CartNode));
+
+    newNode->id = products[index].id;
+    strcpy(newNode->name, products[index].name);
+    newNode->price = products[index].price;
+    newNode->quantity = quantity;
+    newNode->next = NULL;
+
+    products[index].stock -= quantity;
+
+    if (cart == NULL) {
+        cart = newNode;
+    } else {
+        temp = cart;
+
+        while (temp->next != NULL)
+            temp = temp->next;
+
+        temp->next = newNode;
+    }
+
+    printf("Product added to cart successfully!\n");
+}
+
+/* Display cart */
+void displayCart() {
+    struct CartNode *temp = cart;
+    float total = 0;
+
+    if (cart == NULL) {
+        printf("\nYour cart is empty.\n");
+        return;
+    }
+
+    printf("\n=============== SHOPPING CART ===============\n");
+    printf("%-8s %-20s %-10s %-10s\n",
+           "ID", "Product", "Quantity", "Amount");
+
+    while (temp != NULL) {
+        float amount = temp->price * temp->quantity;
+
+        printf("%-8d %-20s %-10d Rs.%-8.2f\n",
+               temp->id,
+               temp->name,
+               temp->quantity,
+               amount);
+
+        total += amount;
+        temp = temp->next;
+    }
+
+    printf("---------------------------------------------\n");
+    printf("Total Amount: Rs. %.2f\n", total);
+}
+
+/* Remove product from cart */
+void removeFromCart() {
+    int id;
+    struct CartNode *temp = cart;
+    struct CartNode *prev = NULL;
+    int index;
+
+    if (cart == NULL) {
+        printf("\nYour cart is empty.\n");
+        return;
+    }
+
+    printf("\nEnter Product ID to remove: ");
+    scanf("%d", &id);
+
+    while (temp != NULL && temp->id != id) {
+        prev = temp;
+        temp = temp->next;
+    }
+
+    if (temp == NULL) {
+        printf("Product not found in cart.\n");
+        return;
+    }
+
+    index = searchProduct(id);
+
+    if (index != -1) {
+        products[index].stock += temp->quantity;
+    }
+
+    if (prev == NULL) {
+        cart = temp->next;
+    } else {
+        prev->next = temp->next;
+    }
+
+    free(temp);
+
+    printf("Product removed from cart successfully!\n");
+}
+
+/* Update quantity */
+void updateQuantity() {
+    int id, newQuantity;
+    int index;
+    struct CartNode *temp = cart;
+
+    printf("\nEnter Product ID: ");
+    scanf("%d", &id);
+
+    index = searchProduct(id);
+
+    if (index == -1) {
+        printf("Product not found.\n");
+        return;
+    }
+
+    while (temp != NULL) {
+        if (temp->id == id) {
+            printf("Current Quantity: %d\n", temp->quantity);
+            printf("Enter New Quantity: ");
+            scanf("%d", &newQuantity);
+
+            if (newQuantity <= 0) {
+                printf("Invalid quantity.\n");
+                return;
+            }
+
+            if (newQuantity > temp->quantity) {
+                int extra = newQuantity - temp->quantity;
+
+                if (extra > products[index].stock) {
+                    printf("Insufficient stock!\n");
+                    return;
+                }
+
+                products[index].stock -= extra;
+            } else {
+                products[index].stock +=
+                    temp->quantity - newQuantity;
+            }
+
+            temp->quantity = newQuantity;
+
+            printf("Quantity updated successfully!\n");
+            return;
+        }
+
+        temp = temp->next;
+    }
+
+    printf("Product is not present in cart.\n");
+}
+
+/* Sort products according to price */
+void sortProductsByPrice() {
+    int i, j;
+    struct Product temp;
+
+    for (i = 0; i < productCount - 1; i++) {
+        for (j = 0; j < productCount - i - 1; j++) {
+
+            if (products[j].price > products[j + 1].price) {
+
+                temp = products[j];
+                products[j] = products[j + 1];
+                products[j + 1] = temp;
+            }
+        }
+    }
+
+    printf("\nProducts sorted by price successfully!\n");
+}
+
+/* Checkout */
+void checkout() {
+    struct CartNode *temp = cart;
+    float total = 0;
+    FILE *file;
+
+    if (cart == NULL) {
+        printf("\nCart is empty. Cannot checkout.\n");
+        return;
+    }
+
+    file = fopen("order_history.txt", "a");
+
+    printf("\n============== FINAL BILL ==============\n");
+
+    while (temp != NULL) {
+        float amount = temp->price * temp->quantity;
+
+        printf("%-20s x %d = Rs. %.2f\n",
+               temp->name,
+               temp->quantity,
+               amount);
+
+        total += amount;
+        temp = temp->next;
+    }
+
+    printf("----------------------------------------\n");
+    printf("TOTAL BILL = Rs. %.2f\n", total);
+    printf("========================================\n");
+
+    if (file != NULL) {
+        fprintf(file, "Order Total: Rs. %.2f\n", total);
+        fclose(file);
+    }
+
+    /* Empty cart */
+    while (cart != NULL) {
+        temp = cart;
+        cart = cart->next;
+        free(temp);
+    }
+
+    printf("Order placed successfully!\n");
+}
+
+/* Main function */
+int main() {
+    int choice;
+
+    do {
+        printf("\n\n========================================\n");
+        printf("       ONLINE SHOPPING CART SYSTEM\n");
+        printf("========================================\n");
+        printf("1. Display Products\n");
+        printf("2. Search Product\n");
+        printf("3. Add Product to Cart\n");
+        printf("4. View Cart\n");
+        printf("5. Remove Product from Cart\n");
+        printf("6. Update Cart Quantity\n");
+        printf("7. Sort Products by Price\n");
+        printf("8. Checkout\n");
+        printf("9. Exit\n");
+        printf("========================================\n");
+
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+
+            case 1:
+                displayProducts();
+                break;
+
+            case 2: {
+                int id, index;
+
+                printf("Enter Product ID: ");
+                scanf("%d", &id);
+
+                index = searchProduct(id);
+
+                if (index != -1) {
+                    printf("\nProduct Found!\n");
+                    printf("ID: %d\n", products[index].id);
+                    printf("Name: %s\n", products[index].name);
+                    printf("Price: Rs. %.2f\n", products[index].price);
+                    printf("Stock: %d\n", products[index].stock);
+                } else {
+                    printf("Product not found.\n");
+                }
+
+                break;
+            }
+
+            case 3:
+                addToCart();
+                break;
+
+            case 4:
+                displayCart();
+                break;
+
+            case 5:
+                removeFromCart();
+                break;
+
+            case 6:
+                updateQuantity();
+                break;
+
+            case 7:
+                sortProductsByPrice();
+                break;
+
+            case 8:
+                checkout();
+                break;
+
+            case 9:
+                printf("\nThank you for using the system!\n");
+                break;
+
+            default:
+                printf("\nInvalid choice!\n");
+        }
+
+    } while (choice != 9);
+
+    return 0;
+}
